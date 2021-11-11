@@ -19,6 +19,7 @@ package org.jkiss.dbeaver.erd.ui.model;
 import org.eclipse.core.runtime.IAdapterFactory;
 import org.eclipse.gef3.EditPart;
 import org.jkiss.dbeaver.DBException;
+import org.jkiss.dbeaver.erd.model.ERDEntity;
 import org.jkiss.dbeaver.erd.model.ERDObject;
 import org.jkiss.dbeaver.erd.ui.part.DiagramPart;
 import org.jkiss.dbeaver.model.DBPNamedObject;
@@ -37,6 +38,7 @@ import org.jkiss.dbeaver.model.struct.DBSObject;
 import org.jkiss.dbeaver.model.struct.DBSStructContainer;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * ERD object adapter
@@ -50,6 +52,17 @@ public class ERDObjectAdapter implements IAdapterFactory {
     public <T> T getAdapter(Object adaptableObject, Class<T> adapterType) {
         if (DBNNode.class == adapterType) {
             Object model = ((EditPart) adaptableObject).getModel();
+            if (model instanceof EntityDiagram) {
+                final List<ERDEntity> entities = ((EntityDiagram) model).getEntities();
+                final List<DBSObject> containers = entities.stream()
+                    .map(ERDObject::getObject)
+                    .map(DBSObject::getParentObject)
+                    .distinct()
+                    .collect(Collectors.toList());
+                if (containers.size() == 1) {
+                    model = entities.get(0);
+                }
+            }
             if (model instanceof ERDObject) {
                 Object object = ((ERDObject<?>) model).getObject();
                 if (object instanceof DBSObject) {
@@ -61,6 +74,8 @@ public class ERDObjectAdapter implements IAdapterFactory {
                     DBNDatabaseNode node = DBNUtils.getNodeByObject((DBSObject) object);
                     if (node instanceof DBNDatabaseItem && node.getObject() instanceof DBSStructContainer) {
                         node = getTablesFolderNode(node);
+                    } else if (node != null && node.getParentNode() instanceof DBNDatabaseNode) {
+                        node = (DBNDatabaseNode) node.getParentNode();
                     }
 
                     if (node != null) {
