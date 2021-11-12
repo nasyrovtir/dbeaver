@@ -1013,4 +1013,9 @@ public class CommonUtils {
         matcher.appendTail(sb);
         return sb.toString();
     }
+    
+    public static boolean isValidHexColor(@Nullable String hex) {
+    	final String regex = "^#[A-Fa-f0-9]{6}$";
+    	return hex == null ? false : hex.matches(regex);
+    }
 }
